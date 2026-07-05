@@ -176,7 +176,23 @@ button {
 .fc .kana { font-size: 14px; color: var(--sub); margin-top: 4px; }
 .fc .taphint { font-size: 12px; color: var(--sub); margin-top: 20px; }
 .fc .mean { font-size: 26px; font-weight: 700; color: var(--green); margin: 6px 0; }
-.fc .pos { display: inline-block; font-size: 12px; background: var(--blue-bg); color: var(--blue); border-radius: 6px; padding: 1px 8px; margin-right: 6px; }
+/* 品詞バッジ（全画面共通）: 品詞ごとに色分け */
+.posb {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 1px 7px;
+  margin-right: 6px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.posb.pos-v   { background: var(--blue-bg);   color: var(--blue); }   /* 動詞 */
+.posb.pos-n   { background: var(--green-bg);  color: var(--green); }  /* 名詞 */
+.posb.pos-adj { background: var(--orange-bg); color: #b45309; }       /* 形容詞 */
+.posb.pos-adv { background: #f3e8ff;          color: #7e22ce; }       /* 副詞 */
+.posb.pos-idm { background: #ccfbf1;          color: #0f766e; }       /* 熟語 */
+.posb.pos-x   { background: #f1f5f9;          color: #475569; }       /* その他 */
 .fc .ex { font-size: 15px; margin-top: 12px; line-height: 1.7; }
 .fc .ex .ja { font-size: 13px; color: var(--sub); }
 .fc .tip { font-size: 13px; background: var(--orange-bg); border-radius: 10px; padding: 8px 12px; margin-top: 12px; text-align: left; }
@@ -214,9 +230,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 2px;
 }
-.sheetrow .ja.hidden-word { filter: blur(7px); }
-.sheetrow .ja.peek { filter: none; background: #fef9c3; border-radius: 8px; }
+.sheetrow .sheettext { padding: 2px 4px; margin: -2px -4px; border-radius: 8px; }
+.sheetrow .sheettext.hidden-word { filter: blur(7px); }
+.sheetrow .sheettext.peek { filter: none; background: #fef9c3; }
 
 /* ===== クイズ ===== */
 .qword { font-size: 30px; font-weight: 700; text-align: center; margin: 8px 0 4px; }
@@ -240,7 +259,6 @@ button {
 .qresult .msg { margin: 8px 0 16px; }
 
 .qmean { text-align: center; color: var(--green); font-weight: 700; font-size: 17px; margin-top: 4px; }
-.qmean .pos { font-size: 12px; background: var(--blue-bg); color: var(--blue); border-radius: 6px; padding: 1px 8px; margin-right: 6px; font-weight: 400; }
 
 .revealbtn { width: 100%; min-height: 52px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 700; }
 .selfbtns { display: flex; gap: 10px; margin-top: 14px; }

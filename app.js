@@ -6,7 +6,7 @@
  * 進捗: localStorage 単一キー（この端末の中だけに保存）
  * ============================================================ */
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const LS_KEY = 'etg.v1';
 const EXPORT_PREFIX = 'ETG1.';
 
@@ -182,6 +182,19 @@ function shuffle(arr) {
 
 function stars(n) {
   return n ? '★'.repeat(n) : '';
+}
+
+/* 品詞バッジ: 一文字略号→フル表記の色分けチップ（"形/動" は2つ並べる） */
+const POS_LABEL = { '動': '動詞', '名': '名詞', '形': '形容詞', '副': '副詞', '熟': '熟語', '前': '前置詞', '接': '接続詞', '代': '代名詞', '助': '助動詞', '間': '間投詞' };
+const POS_CLASS = { '動': 'pos-v', '名': 'pos-n', '形': 'pos-adj', '副': 'pos-adv', '熟': 'pos-idm' };
+
+function posBadge(pos) {
+  if (!pos) return '';
+  return String(pos).split('/').map(p => {
+    const label = POS_LABEL[p] || p;
+    const cls = POS_CLASS[p] || 'pos-x';
+    return '<span class="posb ' + cls + '">' + esc(label) + '</span>';
+  }).join('');
 }
 
 function toast(msg) {
@@ -385,7 +398,7 @@ function fcShow() {
     '<div class="taphint">タップで意味を見る</div>';
   const back =
     '<div class="word" style="font-size:22px">' + esc(w.en) + '</div>' +
-    '<div class="mean">' + (w.pos ? '<span class="pos">' + esc(w.pos) + '</span>' : '') + esc(w.ja) + '</div>' +
+    '<div class="mean">' + posBadge(w.pos) + esc(w.ja) + '</div>' +
     (w.exEn ? '<div class="ex">' + esc(w.exEn) + '<br><span class="ja">' + esc(w.exJa || '') + '</span></div>' : '') +
     (w.tip ? '<div class="tip">💡 ' + esc(w.tip) + '</div>' : '');
 
@@ -439,8 +452,8 @@ async function renderSheet(deckId) {
     '<button class="soundbtn" data-speak="' + esc(w.en) + '">🔊</button>' +
     '<div class="en">' + esc(w.en) +
     (w.kana ? '<small>' + esc(w.kana) + '</small>' : '') + '</div>' +
-    '<div class="ja hidden-word" data-row="' + i + '">' +
-    (w.pos ? esc(w.pos) + '・' : '') + esc(w.ja) + '</div>' +
+    '<div class="ja" data-row="' + i + '">' + posBadge(w.pos) +
+    '<span class="sheettext hidden-word">' + esc(w.ja) + '</span></div>' +
     '</div>'
   ).join('');
 
@@ -456,18 +469,20 @@ async function renderSheet(deckId) {
   bindCommon();
   app.querySelectorAll('.ja[data-row]').forEach(el => {
     el.addEventListener('click', () => {
-      if (el.classList.contains('hidden-word')) {
-        el.classList.remove('hidden-word'); el.classList.add('peek');
+      const t = el.querySelector('.sheettext');
+      if (!t) return;
+      if (t.classList.contains('hidden-word')) {
+        t.classList.remove('hidden-word'); t.classList.add('peek');
       } else {
-        el.classList.add('hidden-word'); el.classList.remove('peek');
+        t.classList.add('hidden-word'); t.classList.remove('peek');
       }
     });
   });
   document.getElementById('hideall').addEventListener('click', () => {
-    app.querySelectorAll('.ja[data-row]').forEach(el => { el.classList.add('hidden-word'); el.classList.remove('peek'); });
+    app.querySelectorAll('.sheettext').forEach(el => { el.classList.add('hidden-word'); el.classList.remove('peek'); });
   });
   document.getElementById('showall').addEventListener('click', () => {
-    app.querySelectorAll('.ja[data-row]').forEach(el => { el.classList.remove('hidden-word'); el.classList.remove('peek'); });
+    app.querySelectorAll('.sheettext').forEach(el => { el.classList.remove('hidden-word'); el.classList.remove('peek'); });
   });
 }
 
@@ -648,8 +663,8 @@ function blankShow(revealed) {
     '<div class="card">' +
     '<div class="note" style="text-align:center">空所に入る単語を思い出そう</div>' +
     '<div class="qsentence">' + esc(w.quizEn) + '</div>' +
-    (String(w.quizEn).indexOf(w.ja) < 0
-      ? '<div class="qmean">' + (w.pos ? '<span class="pos">' + esc(w.pos) + '</span>' : '') + esc(w.ja) + '</div>'
+    (w.ja && String(w.quizEn).indexOf(w.ja) < 0
+      ? '<div class="qmean">' + posBadge(w.pos) + esc(w.ja) + '</div>'
       : '') +
     (revealed
       ? '<div class="qword" style="color:var(--green)">' + esc(w.quizAns) + '</div>' +
@@ -717,7 +732,7 @@ async function renderList(deckId) {
       '<button class="pill ' + (p.learned ? 'known' : 'later') + '" data-toggle="' + esc(w.id) + '">' +
       (p.learned ? '✓ 覚えた' : 'まだ') + '</button>' +
       '</div>' +
-      '<div class="ja">' + (w.pos ? '<span class="pos" style="font-size:11px;background:var(--blue-bg);color:var(--blue);border-radius:5px;padding:0 6px;margin-right:5px">' + esc(w.pos) + '</span>' : '') + '<span class="hideable' + hideCls + '">' + esc(w.ja) + '</span></div>' +
+      '<div class="ja">' + posBadge(w.pos) + '<span class="hideable' + hideCls + '">' + esc(w.ja) + '</span></div>' +
       '<div class="meta">' +
       (w.star ? '<span class="star">' + stars(w.star) + '</span> ' : '') +
       (g ? '<span class="groupbadge" style="color:' + esc(g.color || '#555') + ';background:' + esc(g.bg || '#eee') + '">' + esc((g.sym || '') + ' ' + (g.name || '')) + '</span> ' : '') +
