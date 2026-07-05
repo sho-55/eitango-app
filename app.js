@@ -6,7 +6,7 @@
  * 進捗: localStorage 単一キー（この端末の中だけに保存）
  * ============================================================ */
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const LS_KEY = 'etg.v1';
 const EXPORT_PREFIX = 'ETG1.';
 
@@ -216,12 +216,61 @@ const FILTERS = [
   { key: 'star2', label: '★★以上' }
 ];
 
-function applyFilter(deck, key) {
-  const ws = deck.words;
-  if (key === 'todo')  return ws.filter(w => !wordProg(deck.id, w.id).learned);
-  if (key === 'star3') return ws.filter(w => (w.star || 0) >= 3);
-  if (key === 'star2') return ws.filter(w => (w.star || 0) >= 2);
-  return ws.slice();
+/* 出題はんい（グループ内番号の10語ブロック・複数選択可。セッション中だけ保持） */
+const deckRange = {}; // deckId → 選択ブロックidの配列（空 = ぜんぶ）
+
+function deckBlocks(deck) {
+  const blocks = [];
+  const groups = (Array.isArray(deck.groups) && deck.groups.length)
+    ? deck.groups.slice() : [];
+  const knownKeys = {};
+  groups.forEach(g => { knownKeys[g.key] = true; });
+  // グループ未設定の単語は「・」ブロック群にまとめる
+  if (deck.words.some(w => !w.group || !knownKeys[w.group])) {
+    groups.push({ key: null, sym: '' });
+  }
+  for (const g of groups) {
+    const ws = deck.words.filter(w =>
+      g.key === null ? (!w.group || !knownKeys[w.group]) : w.group === g.key);
+    if (!ws.length) continue;
+    const starts = [];
+    for (let s = 0; s < ws.length; s += 10) starts.push(s);
+    // 端数が5語未満なら前のブロックに吸収（「31-31」のような細切れを防ぐ）
+    if (starts.length > 1 && ws.length - starts[starts.length - 1] < 5) starts.pop();
+    starts.forEach((s, bi) => {
+      const end = (bi === starts.length - 1) ? ws.length : s + 10;
+      blocks.push({
+        id: (g.key === null ? '_' : g.key) + ':' + s,
+        label: (g.sym || '') + (s + 1) + '-' + end,
+        ids: ws.slice(s, end).map(w => w.id)
+      });
+    });
+  }
+  return blocks;
+}
+
+function rangeActive(deckId) {
+  return (deckRange[deckId] || []).length > 0;
+}
+
+function applyRange(deck) {
+  const sel = deckRange[deck.id] || [];
+  if (!sel.length) return deck.words.slice();
+  const idset = {};
+  for (const b of deckBlocks(deck)) {
+    if (sel.indexOf(b.id) >= 0) for (const id of b.ids) idset[id] = true;
+  }
+  return deck.words.filter(w => idset[w.id]);
+}
+
+/* はんい × 状態フィルタを重ねた出題プール */
+function activePool(deck) {
+  let ws = applyRange(deck);
+  const key = deckFilter[deck.id] || 'all';
+  if (key === 'todo')  ws = ws.filter(w => !wordProg(deck.id, w.id).learned);
+  if (key === 'star3') ws = ws.filter(w => (w.star || 0) >= 3);
+  if (key === 'star2') ws = ws.filter(w => (w.star || 0) >= 2);
+  return ws;
 }
 
 function topbar(title, backHash) {
@@ -304,12 +353,19 @@ async function renderDeckMenu(deckId) {
   const answered = st.right + st.wrong;
   const acc = answered ? Math.round(st.right / answered * 100) : null;
   const filterKey = deckFilter[deckId] || 'all';
-  const filtered = applyFilter(deck, filterKey);
+  const filtered = activePool(deck);
   const hasBlank = deck.words.some(w => w.quizEn && w.quizAns);
 
   const chips = FILTERS.map(f =>
     '<button class="chip' + (f.key === filterKey ? ' on' : '') + '" data-filter="' + f.key + '">' + f.label + '</button>'
   ).join('');
+
+  const rangeSel = deckRange[deckId] || [];
+  const rangeChips =
+    '<button class="chip' + (rangeSel.length ? '' : ' on') + '" data-rblock="">ぜんぶ</button>' +
+    deckBlocks(deck).map(b =>
+      '<button class="chip' + (rangeSel.indexOf(b.id) >= 0 ? ' on' : '') + '" data-rblock="' + esc(b.id) + '">' + esc(b.label) + '</button>'
+    ).join('');
 
   app.innerHTML =
     topbar(deck.title, '#/') +
@@ -321,6 +377,11 @@ async function renderDeckMenu(deckId) {
       : '<div class="note">クイズはまだやっていないよ</div>') +
     '</div>' +
     '<div class="filterrow">' + chips + '</div>' +
+    '<div class="note" style="margin-bottom:4px">出題はんい（タップで選ぶ・複数OK）</div>' +
+    '<div class="filterrow">' + rangeChips + '</div>' +
+    (rangeActive(deckId)
+      ? '<div class="note" style="margin:-6px 0 10px">いま ' + filtered.length + ' 語にしぼりこみ中。クイズははんい内ぜんぶ出るよ</div>'
+      : '') +
     '<button class="modebtn" data-go="#/deck/' + esc(deckId) + '/cards"><span class="emoji">🃏</span>' +
     '<span>フラッシュカード<span class="hint">英語 → 意味を思い出す（' + filtered.length + '語）</span></span></button>' +
     '<button class="modebtn" data-go="#/deck/' + esc(deckId) + '/sheet"><span class="emoji">🟥</span>' +
@@ -342,6 +403,20 @@ async function renderDeckMenu(deckId) {
       renderDeckMenu(deckId);
     });
   });
+  app.querySelectorAll('[data-rblock]').forEach(b => {
+    b.addEventListener('click', () => {
+      const id = b.getAttribute('data-rblock');
+      if (!id) {
+        deckRange[deckId] = [];
+      } else {
+        const cur = deckRange[deckId] || [];
+        const i = cur.indexOf(id);
+        if (i >= 0) cur.splice(i, 1); else cur.push(id);
+        deckRange[deckId] = cur;
+      }
+      renderDeckMenu(deckId);
+    });
+  });
   document.getElementById('resetdeck').addEventListener('click', () => {
     if (confirm('「' + deck.title + '」の覚えた記録とクイズ成績を消します。いいですか？')) {
       delete state.decks[deckId];
@@ -359,7 +434,7 @@ let fc = null; // {deckId, queue, i, flipped, knownCount, laterIds}
 async function renderCards(deckId, onlyIds) {
   let deck;
   try { deck = await getDeck(deckId); } catch (e) { renderError(e.message); return; }
-  let pool = applyFilter(deck, deckFilter[deckId] || 'all');
+  let pool = activePool(deck);
   if (onlyIds) pool = deck.words.filter(w => onlyIds.indexOf(w.id) >= 0);
   if (!pool.length) {
     app.innerHTML = topbar('フラッシュカード', '#/deck/' + deckId) +
@@ -439,7 +514,7 @@ function fcShow() {
 async function renderSheet(deckId) {
   let deck;
   try { deck = await getDeck(deckId); } catch (e) { renderError(e.message); return; }
-  const pool = applyFilter(deck, deckFilter[deckId] || 'all');
+  const pool = activePool(deck);
   if (!pool.length) {
     app.innerHTML = topbar('赤シート', '#/deck/' + deckId) +
       '<div class="empty">この条件の単語はありません。</div>';
@@ -524,7 +599,7 @@ function makeChoices(deck, word) {
 async function renderQuiz(deckId, onlyIds) {
   let deck;
   try { deck = await getDeck(deckId); } catch (e) { renderError(e.message); return; }
-  let pool = applyFilter(deck, deckFilter[deckId] || 'all');
+  let pool = activePool(deck);
   if (onlyIds) pool = deck.words.filter(w => onlyIds.indexOf(w.id) >= 0);
   if (deck.words.length < 4) {
     app.innerHTML = topbar('4択クイズ', '#/deck/' + deckId) +
@@ -534,11 +609,14 @@ async function renderQuiz(deckId, onlyIds) {
   }
   if (!pool.length) {
     app.innerHTML = topbar('4択クイズ', '#/deck/' + deckId) +
-      '<div class="empty">この条件の単語はありません。<br>フィルタを「ぜんぶ」に戻してみてね。</div>';
+      '<div class="empty">この条件の単語はありません。<br>はんい・フィルタを「ぜんぶ」に戻してみてね。</div>';
     bindCommon();
     return;
   }
-  const qs = pickQuizWords(deck, pool, Math.min(10, pool.length));
+  // はんい指定中はそのはんいをぜんぶ出題（確認テスト用）。未指定なら「まだ」優先の10問
+  const qs = (rangeActive(deckId) && !onlyIds)
+    ? shuffle(pool)
+    : pickQuizWords(deck, pool, Math.min(10, pool.length));
   quiz = { deckId, deck, qs, i: 0, right: 0, wrongWords: [], locked: false };
   quizShow();
 }
@@ -623,15 +701,18 @@ let blank = null; // {deckId, deck, qs, i, right, wrongWords}
 async function renderBlank(deckId, onlyIds) {
   let deck;
   try { deck = await getDeck(deckId); } catch (e) { renderError(e.message); return; }
-  let pool = applyFilter(deck, deckFilter[deckId] || 'all').filter(w => w.quizEn && w.quizAns);
+  let pool = activePool(deck).filter(w => w.quizEn && w.quizAns);
   if (onlyIds) pool = pool.filter(w => onlyIds.indexOf(w.id) >= 0);
   if (!pool.length) {
     app.innerHTML = topbar('空所クイズ', '#/deck/' + deckId) +
-      '<div class="empty">この条件の空所クイズはありません。</div>';
+      '<div class="empty">この条件の空所クイズはありません。<br>はんい・フィルタを「ぜんぶ」に戻してみてね。</div>';
     bindCommon();
     return;
   }
-  const qs = pickQuizWords(deck, pool, Math.min(10, pool.length));
+  // はんい指定中はそのはんいをぜんぶ出題（確認テスト用）
+  const qs = (rangeActive(deckId) && !onlyIds)
+    ? shuffle(pool)
+    : pickQuizWords(deck, pool, Math.min(10, pool.length));
   blank = { deckId, deck, qs, i: 0, right: 0, wrongWords: [] };
   blankShow(false);
 }
@@ -706,10 +787,19 @@ async function renderList(deckId) {
   try { deck = await getDeck(deckId); } catch (e) { renderError(e.message); return; }
   const lf = listFilter[deckId] || 'all';
   const hide = !!listHideJa[deckId];
-  let pool = deck.words;
+  let pool = applyRange(deck); // デッキメニューの「出題はんい」がリストにも効く
   if (lf === 'known') pool = pool.filter(w => wordProg(deckId, w.id).learned);
   if (lf === 'todo')  pool = pool.filter(w => !wordProg(deckId, w.id).learned);
   if (lf === 'star3') pool = pool.filter(w => (w.star || 0) >= 3);
+
+  // グループ内の通し番号（はんい選択の「①12」と対応）
+  const numOf = {};
+  const numCounter = {};
+  for (const w of deck.words) {
+    const k = w.group || '_';
+    numCounter[k] = (numCounter[k] || 0) + 1;
+    numOf[w.id] = numCounter[k];
+  }
 
   const hideCls = hide ? ' hidden-word' : '';
   const chips = [
@@ -734,6 +824,7 @@ async function renderList(deckId) {
       '</div>' +
       '<div class="ja">' + posBadge(w.pos) + '<span class="hideable' + hideCls + '">' + esc(w.ja) + '</span></div>' +
       '<div class="meta">' +
+      '<span>' + esc((g && g.sym) || '') + numOf[w.id] + '番</span> ' +
       (w.star ? '<span class="star">' + stars(w.star) + '</span> ' : '') +
       (g ? '<span class="groupbadge" style="color:' + esc(g.color || '#555') + ';background:' + esc(g.bg || '#eee') + '">' + esc((g.sym || '') + ' ' + (g.name || '')) + '</span> ' : '') +
       (answered ? '<span>クイズ ' + p.right + '勝' + p.wrong + '敗</span>' : '') +
