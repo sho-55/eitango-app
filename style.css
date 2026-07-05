@@ -239,6 +239,9 @@ button {
 .qresult .score { font-size: 44px; font-weight: 800; color: var(--green); }
 .qresult .msg { margin: 8px 0 16px; }
 
+.qmean { text-align: center; color: var(--green); font-weight: 700; font-size: 17px; margin-top: 4px; }
+.qmean .pos { font-size: 12px; background: var(--blue-bg); color: var(--blue); border-radius: 6px; padding: 1px 8px; margin-right: 6px; font-weight: 400; }
+
 .revealbtn { width: 100%; min-height: 52px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 700; }
 .selfbtns { display: flex; gap: 10px; margin-top: 14px; }
 .selfbtns button { flex: 1; min-height: 54px; font-size: 17px; font-weight: 700; color: #fff; }

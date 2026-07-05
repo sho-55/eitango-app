@@ -6,7 +6,7 @@
  * 進捗: localStorage 単一キー（この端末の中だけに保存）
  * ============================================================ */
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const LS_KEY = 'etg.v1';
 const EXPORT_PREFIX = 'ETG1.';
 
@@ -648,11 +648,12 @@ function blankShow(revealed) {
     '<div class="card">' +
     '<div class="note" style="text-align:center">空所に入る単語を思い出そう</div>' +
     '<div class="qsentence">' + esc(w.quizEn) + '</div>' +
+    (String(w.quizEn).indexOf(w.ja) < 0
+      ? '<div class="qmean">' + (w.pos ? '<span class="pos">' + esc(w.pos) + '</span>' : '') + esc(w.ja) + '</div>'
+      : '') +
     (revealed
       ? '<div class="qword" style="color:var(--green)">' + esc(w.quizAns) + '</div>' +
-        '<div style="text-align:center">' +
-        (w.pos ? '<span class="pos">' + esc(w.pos) + '</span>' : '') + esc(w.ja) +
-        ' <button class="soundbtn" data-speak="' + esc(w.quizAns) + '">🔊</button></div>' +
+        '<div style="text-align:center"><button class="soundbtn" data-speak="' + esc(w.quizAns) + '">🔊</button></div>' +
         (w.tip ? '<div class="tip">💡 ' + esc(w.tip) + '</div>' : '')
       : '') +
     '</div>' +
