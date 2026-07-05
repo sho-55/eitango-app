@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "decks": [
     {
-      "id": "sample-pre2",
-      "file": "sample-pre2.json",
-      "title": "サンプル単語帳（準2級よく出る17語）",
-      "description": "お試し用の単語帳。テスト範囲の本番デッキはここに追加されていくよ",
-      "wordCount": 17,
+      "id": "master-80",
+      "file": "master-80.json",
+      "title": "英単語マスター帳（80語）",
+      "description": "テスト・問題集のわからなかった単語 全80語（旧アプリから移行）",
+      "wordCount": 80,
       "updated": "2026-07-05"
     }
   ]
