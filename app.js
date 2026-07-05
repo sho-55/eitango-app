@@ -6,7 +6,7 @@
  * 進捗: localStorage 単一キー（この端末の中だけに保存）
  * ============================================================ */
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 const LS_KEY = 'etg.v1';
 const EXPORT_PREFIX = 'ETG1.';
 
@@ -387,7 +387,7 @@ async function renderDeckMenu(deckId) {
     '<button class="modebtn" data-go="#/deck/' + esc(deckId) + '/sheet"><span class="emoji">🟥</span>' +
     '<span>赤シート<span class="hint">意味をかくして、タップでチラ見</span></span></button>' +
     '<button class="modebtn" data-go="#/deck/' + esc(deckId) + '/quiz"><span class="emoji">✏️</span>' +
-    '<span>4択クイズ<span class="hint">意味を選ぶ。まだの単語から出るよ</span></span></button>' +
+    '<span>4択クイズ<span class="hint">意味を選ぶ。' + (rangeActive(deckId) ? 'はんい内ぜんぶ出るよ' : 'まだの単語から出るよ') + '</span></span></button>' +
     (hasBlank
       ? '<button class="modebtn" data-go="#/deck/' + esc(deckId) + '/blank"><span class="emoji">💭</span>' +
         '<span>空所クイズ<span class="hint">文の空所の単語を思い出す</span></span></button>'
@@ -438,7 +438,7 @@ async function renderCards(deckId, onlyIds) {
   if (onlyIds) pool = deck.words.filter(w => onlyIds.indexOf(w.id) >= 0);
   if (!pool.length) {
     app.innerHTML = topbar('フラッシュカード', '#/deck/' + deckId) +
-      '<div class="empty">この条件のカードはありません。<br>フィルタを「ぜんぶ」に戻してみてね。</div>';
+      '<div class="empty">この条件のカードはありません。<br>はんい・フィルタを「ぜんぶ」に戻してみてね。</div>';
     bindCommon();
     return;
   }
@@ -517,7 +517,7 @@ async function renderSheet(deckId) {
   const pool = activePool(deck);
   if (!pool.length) {
     app.innerHTML = topbar('赤シート', '#/deck/' + deckId) +
-      '<div class="empty">この条件の単語はありません。</div>';
+      '<div class="empty">この条件の単語はありません。<br>はんい・フィルタを「ぜんぶ」に戻してみてね。</div>';
     bindCommon();
     return;
   }
@@ -613,8 +613,8 @@ async function renderQuiz(deckId, onlyIds) {
     bindCommon();
     return;
   }
-  // はんい指定中はそのはんいをぜんぶ出題（確認テスト用）。未指定なら「まだ」優先の10問
-  const qs = (rangeActive(deckId) && !onlyIds)
+  // はんい指定中・まちがい再挑戦はプールをぜんぶ出題。通常は「まだ」優先の10問
+  const qs = (onlyIds || rangeActive(deckId))
     ? shuffle(pool)
     : pickQuizWords(deck, pool, Math.min(10, pool.length));
   quiz = { deckId, deck, qs, i: 0, right: 0, wrongWords: [], locked: false };
@@ -634,7 +634,7 @@ function quizShow() {
       (quiz.wrongWords.length
         ? '<button class="qnext" id="retrywrong">まちがえた' + quiz.wrongWords.length + '語をもう一度</button>'
         : '') +
-      '<button class="qnext" id="retryall" style="background:var(--card);color:var(--ink);box-shadow:var(--shadow)">新しい10問</button>' +
+      '<button class="qnext" id="retryall" style="background:var(--card);color:var(--ink);box-shadow:var(--shadow)">' + (rangeActive(quiz.deckId) ? 'はんい内をもう一回' : '新しい10問') + '</button>' +
       '<button class="qnext" style="background:var(--green)" data-go="#/deck/' + esc(quiz.deckId) + '">デッキにもどる</button>' +
       '</div>';
     bindCommon();
@@ -709,8 +709,8 @@ async function renderBlank(deckId, onlyIds) {
     bindCommon();
     return;
   }
-  // はんい指定中はそのはんいをぜんぶ出題（確認テスト用）
-  const qs = (rangeActive(deckId) && !onlyIds)
+  // はんい指定中・思い出せなかった語の再挑戦はプールをぜんぶ出題
+  const qs = (onlyIds || rangeActive(deckId))
     ? shuffle(pool)
     : pickQuizWords(deck, pool, Math.min(10, pool.length));
   blank = { deckId, deck, qs, i: 0, right: 0, wrongWords: [] };
