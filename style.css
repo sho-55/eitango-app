@@ -271,6 +271,12 @@ button {
 .pill.known { background: var(--green); color: #fff; }
 .pill.later { background: var(--orange-bg); color: var(--orange); border: 1.5px solid var(--orange); }
 
+/* 単語リストの「日本語を隠す」（赤シートと同じチラ見挙動） */
+.hideable { padding: 2px 4px; margin: -2px -4px; border-radius: 6px; }
+.hideable.hidden-word, .hideable.peek { cursor: pointer; }
+.hideable.hidden-word { filter: blur(7px); }
+.hideable.peek { filter: none; background: #fef9c3; }
+
 .star { color: #f59e0b; font-size: 12px; letter-spacing: 1px; }
 .groupbadge { display: inline-block; font-size: 11px; border-radius: 6px; padding: 1px 7px; font-weight: 600; }
 

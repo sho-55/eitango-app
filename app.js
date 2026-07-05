@@ -6,7 +6,7 @@
  * 進捗: localStorage 単一キー（この端末の中だけに保存）
  * ============================================================ */
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const LS_KEY = 'etg.v1';
 const EXPORT_PREFIX = 'ETG1.';
 
@@ -683,21 +683,25 @@ function blankShow(revealed) {
 /* ---------------- 単語リスト ---------------- */
 
 const listFilter = {};
+const listHideJa = {}; // deckId → true で「日本語を隠す」モード
 
 async function renderList(deckId) {
   let deck;
   try { deck = await getDeck(deckId); } catch (e) { renderError(e.message); return; }
   const lf = listFilter[deckId] || 'all';
+  const hide = !!listHideJa[deckId];
   let pool = deck.words;
   if (lf === 'known') pool = pool.filter(w => wordProg(deckId, w.id).learned);
   if (lf === 'todo')  pool = pool.filter(w => !wordProg(deckId, w.id).learned);
   if (lf === 'star3') pool = pool.filter(w => (w.star || 0) >= 3);
 
+  const hideCls = hide ? ' hidden-word' : '';
   const chips = [
     ['all', 'ぜんぶ'], ['todo', 'まだ'], ['known', '覚えた'], ['star3', '★★★']
   ].map(([k, l]) =>
     '<button class="chip' + (k === lf ? ' on' : '') + '" data-lf="' + k + '">' + l + '</button>'
-  ).join('');
+  ).join('') +
+  '<button class="chip' + (hide ? ' on' : '') + '" id="hidetoggle">🟥 ' + (hide ? '日本語を見せる' : '日本語を隠す') + '</button>';
 
   const rows = pool.map(w => {
     const p = wordProg(deckId, w.id);
@@ -712,15 +716,15 @@ async function renderList(deckId) {
       '<button class="pill ' + (p.learned ? 'known' : 'later') + '" data-toggle="' + esc(w.id) + '">' +
       (p.learned ? '✓ 覚えた' : 'まだ') + '</button>' +
       '</div>' +
-      '<div class="ja">' + (w.pos ? '<span class="pos" style="font-size:11px;background:var(--blue-bg);color:var(--blue);border-radius:5px;padding:0 6px;margin-right:5px">' + esc(w.pos) + '</span>' : '') + esc(w.ja) + '</div>' +
+      '<div class="ja">' + (w.pos ? '<span class="pos" style="font-size:11px;background:var(--blue-bg);color:var(--blue);border-radius:5px;padding:0 6px;margin-right:5px">' + esc(w.pos) + '</span>' : '') + '<span class="hideable' + hideCls + '">' + esc(w.ja) + '</span></div>' +
       '<div class="meta">' +
       (w.star ? '<span class="star">' + stars(w.star) + '</span> ' : '') +
       (g ? '<span class="groupbadge" style="color:' + esc(g.color || '#555') + ';background:' + esc(g.bg || '#eee') + '">' + esc((g.sym || '') + ' ' + (g.name || '')) + '</span> ' : '') +
       (answered ? '<span>クイズ ' + p.right + '勝' + p.wrong + '敗</span>' : '') +
       '</div>' +
       (w.exEn || w.tip
-        ? '<details><summary>例文・覚え方を見る</summary>' +
-          (w.exEn ? '<div style="margin-top:4px">' + esc(w.exEn) + ' <button class="soundbtn" style="font-size:14px" data-speak="' + esc(w.exEn) + '">🔊</button><br><span style="color:var(--sub);font-size:12px">' + esc(w.exJa || '') + '</span></div>' : '') +
+        ? '<details open><summary>例文・覚え方</summary>' +
+          (w.exEn ? '<div style="margin-top:4px">' + esc(w.exEn) + ' <button class="soundbtn" style="font-size:14px" data-speak="' + esc(w.exEn) + '">🔊</button>' + (w.exJa ? '<br><span class="hideable' + hideCls + '" style="color:var(--sub);font-size:12px">' + esc(w.exJa) + '</span>' : '') + '</div>' : '') +
           (w.tip ? '<div class="tip">💡 ' + esc(w.tip) + '</div>' : '') +
           '</details>'
         : '') +
@@ -739,6 +743,23 @@ async function renderList(deckId) {
       renderList(deckId);
     });
   });
+  document.getElementById('hidetoggle').addEventListener('click', () => {
+    listHideJa[deckId] = !hide;
+    renderList(deckId);
+  });
+  if (hide) {
+    // 赤シートと同じ：タップでチラ見（黄色）、もう一度タップで隠す
+    app.querySelectorAll('.hideable').forEach(el => {
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (el.classList.contains('hidden-word')) {
+          el.classList.remove('hidden-word'); el.classList.add('peek');
+        } else {
+          el.classList.add('hidden-word'); el.classList.remove('peek');
+        }
+      });
+    });
+  }
   app.querySelectorAll('[data-toggle]').forEach(b => {
     b.addEventListener('click', () => {
       const id = b.getAttribute('data-toggle');
