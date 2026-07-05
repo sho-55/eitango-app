@@ -233,6 +233,7 @@ button {
   flex-wrap: wrap;
   gap: 2px;
 }
+.sheetrow .ja .posb { margin-right: 0; } /* 右端をテキスト行と揃える（間隔はflexのgapが担う） */
 .sheetrow .sheettext { padding: 2px 4px; margin: -2px -4px; border-radius: 8px; }
 .sheetrow .sheettext.hidden-word { filter: blur(7px); }
 .sheetrow .sheettext.peek { filter: none; background: #fef9c3; }
