@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "id": "master-80",
-  "title": "英単語マスター帳（80語）",
-  "description": "テスト・問題集のわからなかった単語 全80語（旧アプリから移行）",
+  "title": "英単語マスター帳",
+  "description": "テスト・問題集のわからなかった単語を集めた単語帳",
   "updated": "2026-07-05",
   "groups": [
     {
@@ -25,6 +25,13 @@
       "name": "Salt長文の単語",
       "color": "#ea580c",
       "bg": "#fff7ed"
+    },
+    {
+      "key": "4",
+      "sym": "④",
+      "name": "追加の単語",
+      "color": "#7e22ce",
+      "bg": "#f3e8ff"
     }
   ],
   "words": [
@@ -1207,6 +1214,21 @@
       "quizAns": "throughout",
       "kana": "スルーアウト",
       "ipa": "/θruːáut/"
+    },
+    {
+      "id": "tournament",
+      "en": "tournament",
+      "ja": "大会、トーナメント",
+      "pos": "名",
+      "kana": "トーナメント",
+      "ipa": "/túərnəmənt/",
+      "star": 2,
+      "group": "4",
+      "exEn": "Our team won the tennis tournament.",
+      "exJa": "私たちのチームはテニス大会で優勝した。",
+      "tip": "勝ち抜き戦の「トーナメント」。テニス大会のメール長文(23)〜(25)で出た",
+      "quizEn": "We watched the soccer t_________ on TV.（大会）",
+      "quizAns": "tournament"
     }
   ]
 }

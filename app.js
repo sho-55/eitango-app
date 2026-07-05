@@ -6,7 +6,7 @@
  * 進捗: localStorage 単一キー（この端末の中だけに保存）
  * ============================================================ */
 
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.5.0';
 const LS_KEY = 'etg.v1';
 const EXPORT_PREFIX = 'ETG1.';
 
@@ -216,36 +216,24 @@ const FILTERS = [
   { key: 'star2', label: '★★以上' }
 ];
 
-/* 出題はんい（グループ内番号の10語ブロック・複数選択可。セッション中だけ保持） */
+/* 出題はんい（デッキ全体の通し番号で10語ブロック・複数選択可。セッション中だけ保持） */
 const deckRange = {}; // deckId → 選択ブロックidの配列（空 = ぜんぶ）
 
 function deckBlocks(deck) {
+  // 1-10, 11-20, ... の通し番号ブロック（端数が5語未満なら前のブロックに吸収）
+  const ws = deck.words;
   const blocks = [];
-  const groups = (Array.isArray(deck.groups) && deck.groups.length)
-    ? deck.groups.slice() : [];
-  const knownKeys = {};
-  groups.forEach(g => { knownKeys[g.key] = true; });
-  // グループ未設定の単語は「・」ブロック群にまとめる
-  if (deck.words.some(w => !w.group || !knownKeys[w.group])) {
-    groups.push({ key: null, sym: '' });
-  }
-  for (const g of groups) {
-    const ws = deck.words.filter(w =>
-      g.key === null ? (!w.group || !knownKeys[w.group]) : w.group === g.key);
-    if (!ws.length) continue;
-    const starts = [];
-    for (let s = 0; s < ws.length; s += 10) starts.push(s);
-    // 端数が5語未満なら前のブロックに吸収（「31-31」のような細切れを防ぐ）
-    if (starts.length > 1 && ws.length - starts[starts.length - 1] < 5) starts.pop();
-    starts.forEach((s, bi) => {
-      const end = (bi === starts.length - 1) ? ws.length : s + 10;
-      blocks.push({
-        id: (g.key === null ? '_' : g.key) + ':' + s,
-        label: (g.sym || '') + (s + 1) + '-' + end,
-        ids: ws.slice(s, end).map(w => w.id)
-      });
+  const starts = [];
+  for (let s = 0; s < ws.length; s += 10) starts.push(s);
+  if (starts.length > 1 && ws.length - starts[starts.length - 1] < 5) starts.pop();
+  starts.forEach((s, bi) => {
+    const end = (bi === starts.length - 1) ? ws.length : s + 10;
+    blocks.push({
+      id: 'n:' + s,
+      label: (s + 1) + '-' + end,
+      ids: ws.slice(s, end).map(w => w.id)
     });
-  }
+  });
   return blocks;
 }
 
@@ -792,14 +780,9 @@ async function renderList(deckId) {
   if (lf === 'todo')  pool = pool.filter(w => !wordProg(deckId, w.id).learned);
   if (lf === 'star3') pool = pool.filter(w => (w.star || 0) >= 3);
 
-  // グループ内の通し番号（はんい選択の「①12」と対応）
+  // デッキ全体の通し番号（はんいチップの「11-20」と対応）
   const numOf = {};
-  const numCounter = {};
-  for (const w of deck.words) {
-    const k = w.group || '_';
-    numCounter[k] = (numCounter[k] || 0) + 1;
-    numOf[w.id] = numCounter[k];
-  }
+  deck.words.forEach((w, i) => { numOf[w.id] = i + 1; });
 
   const hideCls = hide ? ' hidden-word' : '';
   const chips = [
@@ -824,7 +807,7 @@ async function renderList(deckId) {
       '</div>' +
       '<div class="ja">' + posBadge(w.pos) + '<span class="hideable' + hideCls + '">' + esc(w.ja) + '</span></div>' +
       '<div class="meta">' +
-      '<span>' + esc((g && g.sym) || '') + numOf[w.id] + '番</span> ' +
+      '<span>' + numOf[w.id] + '番</span> ' +
       (w.star ? '<span class="star">' + stars(w.star) + '</span> ' : '') +
       (g ? '<span class="groupbadge" style="color:' + esc(g.color || '#555') + ';background:' + esc(g.bg || '#eee') + '">' + esc((g.sym || '') + ' ' + (g.name || '')) + '</span> ' : '') +
       (answered ? '<span>クイズ ' + p.right + '勝' + p.wrong + '敗</span>' : '') +

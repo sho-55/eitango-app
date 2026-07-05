@@ -4,9 +4,9 @@
     {
       "id": "master-80",
       "file": "master-80.json",
-      "title": "英単語マスター帳（80語）",
-      "description": "テスト・問題集のわからなかった単語 全80語（旧アプリから移行）",
-      "wordCount": 80,
+      "title": "英単語マスター帳",
+      "description": "テスト・問題集のわからなかった単語を集めた単語帳",
+      "wordCount": 81,
       "updated": "2026-07-05"
     }
   ]
